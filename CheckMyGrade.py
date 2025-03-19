@@ -1,5 +1,5 @@
-# check_my_grade.py
 import csv
+import os
 from encdyc import TextSecurity  # Import the TextSecurity class from encdyc.py
 
 # Student Class
@@ -20,12 +20,14 @@ class Student:
         print(f"Grades: {self.grades}")
         print(f"Marks: {self.marks}")
 
-    def update_student_record(self, first_name=None, last_name=None, course_id=None, grades=None, marks=None):
+    def update_student_record(self, first_name=None, last_name=None, email_address=None, course_id=None, grades=None, marks=None):
         """Update student details."""
         if first_name:
             self.first_name = first_name
         if last_name:
             self.last_name = last_name
+        if email_address:
+            self.email_address = email_address
         if course_id:
             self.course_id = course_id
         if grades:
@@ -58,6 +60,7 @@ class Professor:
         self.email_address = email_address
         self.rank = rank
         self.course_id = course_id
+
     def professors_details(self):
         """Display professor details."""
         print(f"Professor ID: {self.professor_id}")
@@ -76,12 +79,19 @@ class LoginUser:
         self.role = role
 
     def login(self, entered_password):
-        """Authenticate user by comparing decrypted password."""
-        return self.cipher.decrypt(self.password) == entered_password
-
+        """Authenticate user by comparing encrypted passwords."""
+        # Encrypt the entered password
+        encrypted_entered_password = self.cipher.encrypt(entered_password)
+        # Compare the encrypted passwords
+        return self.password == encrypted_entered_password
     def change_password(self, new_password):
         """Change the password and encrypt it."""
         self.password = self.cipher.encrypt(new_password)
+    def add_login_user(self, email_id, password, role):
+        """Add a new login user."""
+        login_user = LoginUser(email_id, password, role)
+        self.login_users.append(login_user)
+        self.save_all_data()  # Save data to CSV files
 
 
 # Main Application Class
@@ -95,10 +105,12 @@ class CheckMyGrade:
     def add_student(self, student):
         """Add a new student."""
         self.students.append(student)
+        self.save_all_data()  # Save data to CSV files
 
     def delete_student(self, email):
         """Delete a student by email."""
         self.students = [s for s in self.students if s.email_address != email]
+        self.save_all_data()  # Save data to CSV files
 
     def search_student(self, email):
         """Search for a student by email."""
@@ -132,21 +144,59 @@ class CheckMyGrade:
 
     def load_data_from_csv(self, filename, data_type):
         """Load data from CSV file."""
-        with open(filename, mode='r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
+        try:
+            with open(filename, mode='r') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    if data_type == "student":
+                        student = Student(
+                            row['First_name'],
+                            row['Last_name'],
+                            row['Email_address'],
+                            row['Course_id'],
+                            row['Grades'],
+                            int(row['Marks'])
+                        )
+                        self.students.append(student)
+                    elif data_type == "course":
+                        course = Course(
+                            row['Course_id'],
+                            row['Course_name'],
+                            row['Credits'],
+                            row['Description']
+                        )
+                        self.courses.append(course)
+                    elif data_type == "professor":
+                        professor = Professor(
+                            row['Professor_id'],
+                            row['Professor_Name'],
+                            row['Rank'],
+                            row['Course_id']
+                        )
+                        self.professors.append(professor)
+                    elif data_type == "login":
+                        login_user = LoginUser(
+                            row['User_id'],
+                            row['Password'],
+                            row['Role']
+                        )
+                        self.login_users.append(login_user)
+        except FileNotFoundError:
+            print(f"Error: {filename} not found. Creating a new file.")
+            # Create an empty CSV file with headers
+            with open(filename, mode='w', newline='') as file:
                 if data_type == "student":
-                    student = Student(row['First_name'], row['Last_name'], row['Email_address'], row['Course_id'], row['Grades'], int(row['Marks']))
-                    self.add_student(student)
+                    writer = csv.writer(file)
+                    writer.writerow(['Email_address', 'First_name', 'Last_name', 'Course_id', 'Grades', 'Marks'])
                 elif data_type == "course":
-                    course = Course(row['Course_id'], row['Course_name'], row['Credits'], row['Description'])
-                    self.courses.append(course)
+                    writer = csv.writer(file)
+                    writer.writerow(['Course_id', 'Course_name', 'Credits', 'Description'])
                 elif data_type == "professor":
-                    professor = Professor(row['Professor_id'], row['Professor_Name'], row['Rank'], row['Course_id'])
-                    self.professors.append(professor)
+                    writer = csv.writer(file)
+                    writer.writerow(['Professor_id', 'Professor_Name', 'Rank', 'Course_id'])
                 elif data_type == "login":
-                    login_user = LoginUser(row['User_id'], row['Password'], row['Role'])
-                    self.login_users.append(login_user)
+                    writer = csv.writer(file)
+                    writer.writerow(['User_id', 'Password', 'Role'])
 
     def save_data_to_csv(self, filename, data_type):
         """Save data to CSV file."""
@@ -178,7 +228,7 @@ class CheckMyGrade:
         self.save_data_to_csv("professors.csv", "professor")
         self.save_data_to_csv("login.csv", "login")
 
-# Main Function to Run the Application
+
 def main():
     app = CheckMyGrade()
 
@@ -197,8 +247,13 @@ def main():
         print("5. Display Students Sorted by Marks")
         print("6. Calculate Average Marks")
         print("7. Calculate Median Marks")
-        print("8. Save Data to CSV")
-        print("9. Exit")
+        print("8. Add Course")
+        print("9. Delete Course")
+        print("10. Add Professor")
+        print("11. Delete Professor")
+        print("12. Add Login User")
+        print("13. Login")
+        print("14. Exit")
 
         choice = input("Enter your choice: ")
 
@@ -252,14 +307,64 @@ def main():
             print(f"\nMedian Marks: {median_marks}")
 
         elif choice == "8":
-            # Save Data to CSV
-            app.save_data_to_csv("students_updated.csv", "student")
-            app.save_data_to_csv("courses_updated.csv", "course")
-            app.save_data_to_csv("professors_updated.csv", "professor")
-            app.save_data_to_csv("login_updated.csv", "login")
-            print("Data saved to CSV files successfully!")
+            # Add Course
+            course_id = input("Enter Course ID: ")
+            course_name = input("Enter Course Name: ")
+            credits = input("Enter Credits: ")
+            description = input("Enter Description: ")
+            course = Course(course_id, course_name, credits, description)
+            app.courses.append(course)
+            app.save_all_data()
+            print("Course added successfully!")
 
         elif choice == "9":
+            # Delete Course
+            course_id = input("Enter Course ID to delete: ")
+            app.courses = [c for c in app.courses if c.course_id != course_id]
+            app.save_all_data()
+            print("Course deleted successfully!")
+
+        elif choice == "10":
+            # Add Professor
+            professor_id = input("Enter Professor ID: ")
+            name = input("Enter Professor Name: ")
+            email_address = input("Enter Email Address: ")
+            rank = input("Enter Rank: ")
+            course_id = input("Enter Course ID: ")
+            professor = Professor(professor_id, name, email_address, rank, course_id)
+            app.professors.append(professor)
+            app.save_all_data()
+            print("Professor added successfully!")
+
+        elif choice == "11":
+            # Delete Professor
+            professor_id = input("Enter Professor ID to delete: ")
+            app.professors = [p for p in app.professors if p.professor_id != professor_id]
+            app.save_all_data()
+            print("Professor deleted successfully!")
+
+        elif choice == "12":
+            # Add Login User
+            email_id = input("Enter Email ID: ")
+            password = input("Enter Password: ")
+            role = input("Enter Role (student/professor/admin): ")
+            login_user = LoginUser(email_id, password, role)
+            app.login_users.append(login_user)
+            app.save_all_data()
+            print("Login user added successfully!")
+
+        elif choice == "13":
+            # Login
+            email_id = input("Enter Email ID: ")
+            password = input("Enter Password: ")
+            for user in app.login_users:
+                if user.email_id == email_id and user.login(password):
+                    print("Login successful!")
+                    break
+            else:
+                print("Invalid email or password.")
+
+        elif choice == "14":
             # Exit
             print("Exiting the application. Goodbye!")
             break
