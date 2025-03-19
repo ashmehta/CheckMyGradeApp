@@ -1,1 +1,4 @@
 Email_address,First_name,Last_name,Course_id,Grades,Marks
+email1@example.com,First1,Last1,DATA200,A,95
+email2@example.com,First2,Last2,DATA200,B,85
+email3@example.com,First3,Last3,DATA200,C,75

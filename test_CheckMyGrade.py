@@ -53,4 +53,64 @@ class TestCheckMyGrade(unittest.TestCase):
         self.assertGreater(len(self.app.students), 0)
 
         # Search for a student and measure time
-        start_time = time.time
+        start_time = time.time()
+        student = self.app.search_student("email1@example.com")
+        end_time = time.time()
+        self.assertIsNotNone(student)
+        print(f"\nTime taken to search for a student: {end_time - start_time:.6f} seconds")
+
+    def test_sort_students(self):
+        """Test sorting student records by marks and email address."""
+        # Add some students for sorting
+        self.app.students = [
+            Student("First1", "Last1", "email1@example.com", "DATA200", "A", 95),
+            Student("First2", "Last2", "email2@example.com", "DATA200", "B", 85),
+            Student("First3", "Last3", "email3@example.com", "DATA200", "C", 75),
+        ]
+
+        # Sort by marks (descending)
+        start_time = time.time()
+        sorted_by_marks = self.app.sort_students_by_marks()
+        end_time = time.time()
+        self.assertEqual(sorted_by_marks[0].marks, 95)  # Highest marks should be first
+        print(f"\nTime taken to sort students by marks: {end_time - start_time:.6f} seconds")
+
+        # Sort by email address (ascending)
+        start_time = time.time()
+        sorted_by_email = sorted(self.app.students, key=lambda x: x.email_address)
+        end_time = time.time()
+        self.assertEqual(sorted_by_email[0].email_address, "email1@example.com")  # First email alphabetically
+        print(f"\nTime taken to sort students by email: {end_time - start_time:.6f} seconds")
+
+    def test_course_management(self):
+        """Test adding, deleting, and modifying courses."""
+        # Add a course
+        course = Course("DATA300", "Advanced Data Science", 3, "Advanced topics in data science")
+        self.app.courses.append(course)
+        self.assertEqual(len(self.app.courses), 1)
+
+        # Modify a course
+        course.course_name = "Updated Course Name"
+        self.assertEqual(self.app.courses[0].course_name, "Updated Course Name")
+
+        # Delete a course
+        self.app.courses = [c for c in self.app.courses if c.course_id != "DATA300"]
+        self.assertEqual(len(self.app.courses), 0)
+
+    def test_professor_management(self):
+        """Test adding, deleting, and modifying professors."""
+        # Add a professor
+        professor = Professor("prof1@example.com", "John Doe", "john@example.com", "Senior Professor", "DATA200")
+        self.app.professors.append(professor)
+        self.assertEqual(len(self.app.professors), 1)
+
+        # Modify a professor
+        professor.name = "Updated Name"
+        self.assertEqual(self.app.professors[0].name, "Updated Name")
+
+        # Delete a professor
+        self.app.professors = [p for p in self.app.professors if p.professor_id != "prof1@example.com"]
+        self.assertEqual(len(self.app.professors), 0)
+
+if __name__ == "__main__":
+    unittest.main()
